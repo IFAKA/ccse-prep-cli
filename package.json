@@ -1,7 +1,29 @@
 {
   "name": "ccse-prep-cli",
   "version": "0.1.0",
+  "description": "Terminal-first CCSE 2026 Spanish citizenship exam preparation with mock exams and spaced review",
   "private": true,
+  "license": "MIT",
+  "keywords": [
+    "ccse",
+    "ccse-2026",
+    "spanish-citizenship",
+    "spanish-nationality",
+    "exam-prep",
+    "spaced-repetition",
+    "retrieval-practice",
+    "terminal",
+    "cli",
+    "tmux"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IFAKA/ccse-prep-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/IFAKA/ccse-prep-cli/issues"
+  },
+  "homepage": "https://github.com/IFAKA/ccse-prep-cli#readme",
   "type": "module",
   "engines": {
     "node": ">=18"
