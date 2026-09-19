@@ -52,7 +52,7 @@ install_app() {
 
   rm -rf "$APP_DIR"
   mkdir -p "$APP_DIR" "$BIN_DIR"
-  cp -R "$source_dir/bin" "$source_dir/data" "$source_dir/src" "$source_dir/package.json" "$source_dir/package-lock.json" "$APP_DIR/"
+  cp -R "$source_dir/bin" "$source_dir/data" "$source_dir/src" "$source_dir/scripts" "$source_dir/package.json" "$source_dir/package-lock.json" "$APP_DIR/"
   (cd "$APP_DIR" && npm ci --omit=dev --ignore-scripts >/dev/null) || fail "Dependency installation failed."
   chmod +x "$APP_DIR/bin/ccse.mjs"
 
@@ -88,6 +88,7 @@ install_app() {
   esac
   say "Inspect status: ${BIN_PATH} --bank-info"
   say "Start studying: ${BIN_PATH}"
+  say "Automatic start: source \"${APP_DIR}/scripts/ccse-shell-gate.zsh\" from ~/.zshrc"
   say "Uninstall app: $0 uninstall"
   say "Study data is preserved at $DATA_DIR"
 }

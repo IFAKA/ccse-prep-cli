@@ -69,10 +69,10 @@ The installer keeps application files under `~/.local/share/ccse-prep-cli` and s
 
 ## Daily automatic launch
 
-If you open a terminal every day, source the shell gate from `~/.zshrc`:
+If you want one automatic session when you open your first terminal each day, source the installed shell gate from `~/.zshrc`:
 
 ```zsh
-source "/absolute/path/to/ccse-prep-cli/scripts/ccse-shell-gate.zsh"
+source "$HOME/.local/share/ccse-prep-cli/app/scripts/ccse-shell-gate.zsh"
 ```
 
 The gate launches one session per day. Inside tmux it creates a temporary `ccse-prep` window and leaves your current window untouched. You can always run `ccse` manually for an additional session.
