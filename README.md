@@ -40,7 +40,7 @@ This is a practical study aid, not a claim that one exact schedule is scientific
 Install or reinstall with one command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/IFAKA/ccse-prep-cli/master/scripts/ccse-installer.sh | sh
+curl -fsSL https://raw.githubusercontent.com/IFAKA/ccse-prep-cli/refs/heads/master/scripts/ccse-installer.sh | sh
 ```
 
 The installer checks Node.js 18+, downloads the project, installs runtime dependencies, refreshes the question bank, creates `~/.local/bin/ccse`, and prints the enabled features and active bank status. Open a new terminal if `~/.local/bin` was not already on your `PATH`.
@@ -54,7 +54,7 @@ ccse
 To uninstall the application while preserving study progress:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/IFAKA/ccse-prep-cli/master/scripts/ccse-installer.sh | sh -s -- uninstall
+curl -fsSL https://raw.githubusercontent.com/IFAKA/ccse-prep-cli/refs/heads/master/scripts/ccse-installer.sh | sh -s -- uninstall
 ```
 
 To inspect the installed command without starting a session:
