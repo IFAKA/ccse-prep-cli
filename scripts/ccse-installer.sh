@@ -53,7 +53,7 @@ install_app() {
   rm -rf "$APP_DIR"
   mkdir -p "$APP_DIR" "$BIN_DIR"
   cp -R "$source_dir/bin" "$source_dir/data" "$source_dir/src" "$source_dir/package.json" "$source_dir/package-lock.json" "$APP_DIR/"
-  npm --prefix "$APP_DIR" ci --omit=dev --ignore-scripts >/dev/null || fail "Dependency installation failed."
+  (cd "$APP_DIR" && npm ci --omit=dev --ignore-scripts >/dev/null) || fail "Dependency installation failed."
   chmod +x "$APP_DIR/bin/ccse.mjs"
 
   if [ -e "$BIN_PATH" ] && [ ! -L "$BIN_PATH" ]; then
