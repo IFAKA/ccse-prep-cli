@@ -37,14 +37,13 @@ This is a practical study aid, not a claim that one exact schedule is scientific
 
 ## Install
 
-Clone and link the command locally:
+Install or reinstall with one command:
 
 ```bash
-git clone https://github.com/IFAKA/ccse-prep-cli.git
-cd ccse-prep-cli
-npm install
-npm link
+curl -fsSL https://raw.githubusercontent.com/IFAKA/ccse-prep-cli/master/scripts/ccse-installer.sh | sh
 ```
+
+The installer checks Node.js 18+, downloads the project, installs runtime dependencies, refreshes the question bank, creates `~/.local/bin/ccse`, and prints the enabled features and active bank status. Open a new terminal if `~/.local/bin` was not already on your `PATH`.
 
 Then run:
 
@@ -52,7 +51,21 @@ Then run:
 ccse
 ```
 
-`npm link` makes the `ccse` command available from any directory while pointing at your local checkout.
+To uninstall the application while preserving study progress:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/IFAKA/ccse-prep-cli/master/scripts/ccse-installer.sh | sh -s -- uninstall
+```
+
+To inspect the installed command without starting a session:
+
+```bash
+ccse --version
+ccse --help
+ccse --bank-info
+```
+
+The installer keeps application files under `~/.local/share/ccse-prep-cli` and study data under `~/.local/share/ccse-prep`. Uninstalling removes only the application and command link; progress is preserved.
 
 ## Daily automatic launch
 
@@ -104,6 +117,16 @@ Useful diagnostics:
 ```bash
 ccse --path
 ccse --validate-bank
+ccse --bank-info
+ccse --update-bank
+```
+
+The CLI checks the project-hosted question bank once per month during the normal year and once per day in December and January, when the annual bank is usually published. A downloaded bank is validated before activation and stored in the local data directory. If the network is unavailable or the download is invalid, the last-known-good bank—or the bundled bank on first install—is used automatically.
+
+For testing or a controlled mirror, override the feed with `CCSE_BANK_URL`:
+
+```bash
+CCSE_BANK_URL=https://example.com/question-bank.json ccse --update-bank
 ```
 
 ## Verification

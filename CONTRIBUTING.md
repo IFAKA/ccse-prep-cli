@@ -8,6 +8,7 @@ Thanks for helping improve CCSE Prep CLI.
 npm install
 npm test
 node bin/ccse.mjs --validate-bank
+sh -n scripts/ccse-installer.sh
 ```
 
 Keep changes focused and preserve the append-only event format. New behavior should have focused tests. Do not add unofficial exam questions, external content, AI-generated explanations, credentials, or local event data.
