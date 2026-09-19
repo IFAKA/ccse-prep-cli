@@ -53,7 +53,7 @@ async function runQuiz() {
   const events = await loadEvents();
   const states = reduceTerminalEvents(events);
   const now = Date.now();
-  const plan = sessionPlanForDate(bank, states, new Date(now));
+  const plan = sessionPlanForDate(bank, states, new Date(now), events);
   if (plan.mode === "exam-day") {
     console.log("CCSE exam day: automatic preparation is paused. Good luck.");
     return true;
@@ -70,13 +70,13 @@ async function runQuiz() {
     ? { ...plan, startedAt: started.timestamp, questions: started.payload.questionIds.map((id) => bank.find((question) => question.id === id)).filter(Boolean) }
     : { ...plan, startedAt: now };
   if (!resumable) {
-    await appendEvent({ eventId: `${sessionId}-started`, deviceId, timestamp: now, type: "SESSION_STARTED", payload: { sessionId, day: today, mode: plan.mode, deviceId, questionIds: plan.questions.map((question) => question.id) } });
+    await appendEvent({ eventId: `${sessionId}-started`, deviceId, timestamp: now, type: "SESSION_STARTED", payload: { sessionId, day: today, mode: plan.mode, sessionKind: plan.sessionKind, feedbackMode: plan.feedbackMode, delayedQuestionIds: plan.delayedQuestionIds ?? [], deviceId, questionIds: plan.questions.map((question) => question.id) } });
   }
   let completed = false;
   let completionWrite;
   await runTerminalTui({ bank, states, events, deviceId, appendEvent, now, plan: sessionPlan, sessionId, resumeAnswers, onDone: async (summary) => {
     completed = true;
-    completionWrite = appendEvent({ eventId: `${sessionId}-completed`, deviceId, timestamp: Date.now(), type: "SESSION_COMPLETED", payload: { sessionId, ...summary } });
+    completionWrite = appendEvent({ eventId: `${sessionId}-completed`, deviceId, timestamp: Date.now(), type: "SESSION_COMPLETED", payload: { sessionId, mode: sessionPlan.mode, sessionKind: sessionPlan.sessionKind, feedbackMode: sessionPlan.feedbackMode, ...summary } });
     await completionWrite;
   } });
   if (completionWrite) await completionWrite;

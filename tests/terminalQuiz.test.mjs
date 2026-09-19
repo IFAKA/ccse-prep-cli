@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answerKeyForInput, answerReview, buildMockPlan, canFinish, EXAM_DURATION_MS, explanationForQuestion, PREP_PASS_TARGET, reduceTerminalEvents, sessionModeForDate, selectTerminalQuestion, terminalSummary, TASK_DISTRIBUTION, validateQuestionBank, wrongAnswerReview } from "../src/terminalQuiz.mjs";
+import { answerKeyForInput, answerReview, buildMockPlan, canFinish, completionSummary, EXAM_DURATION_MS, explanationForQuestion, PREP_PASS_TARGET, reduceTerminalEvents, sessionModeForDate, sessionPlanForDate, selectTerminalQuestion, terminalSummary, TASK_DISTRIBUTION, validateQuestionBank, wrongAnswerReview } from "../src/terminalQuiz.mjs";
 import questionsData from "../data/ccse-2026-questions.json" with { type: "json" };
 
 const questions = questionsData.questions;
@@ -115,5 +115,34 @@ describe("terminal quiz", () => {
     expect(sessionModeForDate(new Date("2026-09-22T12:00:00Z"))).toBe("mock");
     expect(sessionModeForDate(new Date("2026-09-24T12:00:00Z"))).toBe("exam-day");
     expect(PREP_PASS_TARGET).toBe(20);
+  });
+
+  it("marks review and mock plans with their learning behavior", () => {
+    const review = sessionPlanForDate(questions, {}, new Date("2026-09-20T12:00:00Z"));
+    const mock = sessionPlanForDate(questions, {}, new Date("2026-09-22T12:00:00Z"));
+    expect(review).toMatchObject({ sessionKind: "weak-review", feedbackMode: "immediate" });
+    expect(mock).toMatchObject({ sessionKind: "mock", feedbackMode: "end-of-session" });
+    expect(new Set(mock.questions.map((question) => question.id)).size).toBe(25);
+  });
+
+  it("puts the previous completed session's misses into delayed review first", () => {
+    const events = [{ type: "SESSION_COMPLETED", timestamp: 10, payload: { wrongQuestionIds: [1005, 1001] } }];
+    const plan = sessionPlanForDate(questions, {}, new Date("2026-09-20T12:00:00Z"), events);
+    expect(plan.delayedQuestionIds.slice(0, 2)).toEqual([1005, 1001]);
+    expect(plan.questions.slice(0, 2).map((question) => question.id)).toEqual([1005, 1001]);
+  });
+
+  it("separates delayed and fresh scores and keeps both pass thresholds", () => {
+    const answers = Array.from({ length: 25 }, (_, index) => ({ questionId: index + 1, correct: index < 20 }));
+    const summary = completionSummary(answers, { 1: { status: "weak" } }, {}, answers.map(({ questionId }) => ({ id: questionId, task: 1 })), { delayedQuestionIds: [1], total: 25, sessionKind: "weak-review" });
+    expect(summary).toMatchObject({ officialPassed: true, safetyPassed: true, unanswered: 0, wrongQuestionIds: [21, 22, 23, 24, 25] });
+    expect(summary.delayedReview).toMatchObject({ answered: 1, correct: 1 });
+    expect(summary.freshScore).toMatchObject({ answered: 24, correct: 19 });
+  });
+
+  it("reports an incomplete timed-out session without passing it", () => {
+    const answers = Array.from({ length: 14 }, (_, index) => ({ questionId: index + 1, correct: true }));
+    const summary = completionSummary(answers, {}, {}, questions, { timedOut: true, total: 25, sessionKind: "mock" });
+    expect(summary).toMatchObject({ timedOut: true, unanswered: 11, officialPassed: false, safetyPassed: false });
   });
 });
