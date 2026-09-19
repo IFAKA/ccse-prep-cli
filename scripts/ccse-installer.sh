@@ -4,7 +4,8 @@ set -eu
 REPO_URL="${CCSE_REPO_URL:-https://github.com/IFAKA/ccse-prep-cli}"
 REPO_BRANCH="${CCSE_REPO_BRANCH:-master}"
 INSTALL_ROOT="${CCSE_INSTALL_ROOT:-${HOME}/.local/share/ccse-prep-cli}"
-APP_DIR="${INSTALL_ROOT}/app"
+RELEASES_DIR="${INSTALL_ROOT}/releases"
+APP_DIR="${INSTALL_ROOT}/current"
 BIN_DIR="${CCSE_BIN_DIR:-${HOME}/.local/bin}"
 BIN_PATH="${BIN_DIR}/ccse"
 DATA_DIR="${CCSE_DATA_DIR:-${HOME}/.local/share/ccse-prep}"
@@ -50,16 +51,18 @@ install_app() {
   source_dir="${temporary_root}/ccse-prep-cli-${REPO_BRANCH}"
   [ -d "$source_dir" ] || fail "Downloaded release has an unexpected layout."
 
-  rm -rf "$APP_DIR"
-  mkdir -p "$APP_DIR" "$BIN_DIR"
-  cp -R "$source_dir/bin" "$source_dir/data" "$source_dir/src" "$source_dir/scripts" "$source_dir/package.json" "$source_dir/package-lock.json" "$APP_DIR/"
-  (cd "$APP_DIR" && npm ci --omit=dev --ignore-scripts >/dev/null) || fail "Dependency installation failed."
-  chmod +x "$APP_DIR/bin/ccse.mjs"
+  mkdir -p "$RELEASES_DIR" "$BIN_DIR"
+  release_dir=$(mktemp -d "$RELEASES_DIR/release.XXXXXX")
+  cp -R "$source_dir/bin" "$source_dir/data" "$source_dir/src" "$source_dir/scripts" "$source_dir/package.json" "$source_dir/package-lock.json" "$release_dir/"
+  (cd "$release_dir" && npm ci --omit=dev --ignore-scripts >/dev/null) || fail "Dependency installation failed."
+  chmod +x "$release_dir/bin/ccse.mjs"
 
   if [ -e "$BIN_PATH" ] && [ ! -L "$BIN_PATH" ]; then
     fail "$BIN_PATH already exists and is not managed by CCSE."
   fi
   rm -f "$BIN_PATH"
+  rm -f "$APP_DIR"
+  ln -s "$release_dir" "$APP_DIR"
   ln -s "$APP_DIR/bin/ccse.mjs" "$BIN_PATH"
 
   say "✓ Installed application at $APP_DIR"
@@ -102,7 +105,9 @@ uninstall_app() {
   else
     say "✓ Command was already absent"
   fi
-  rm -rf "$INSTALL_ROOT"
+  rm -f "$APP_DIR"
+  rm -rf "$RELEASES_DIR"
+  rmdir "$INSTALL_ROOT" 2>/dev/null || true
   say "✓ Removed application files"
   say "✓ Preserved study data at $DATA_DIR"
   say "Uninstall complete."

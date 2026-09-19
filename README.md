@@ -65,14 +65,14 @@ ccse --help
 ccse --bank-info
 ```
 
-The installer keeps application files under `~/.local/share/ccse-prep-cli` and study data under `~/.local/share/ccse-prep`. Uninstalling removes only the application and command link; progress is preserved.
+The installer keeps versioned application releases under `~/.local/share/ccse-prep-cli` and study data under `~/.local/share/ccse-prep`. Uninstalling removes only the application and command link; progress is preserved.
 
 ## Daily automatic launch
 
 If you want one automatic session when you open your first terminal each day, source the installed shell gate from `~/.zshrc`:
 
 ```zsh
-source "$HOME/.local/share/ccse-prep-cli/app/scripts/ccse-shell-gate.zsh"
+source "$HOME/.local/share/ccse-prep-cli/current/scripts/ccse-shell-gate.zsh"
 ```
 
 The gate launches one session per day. Inside tmux it creates a temporary `ccse-prep` window and leaves your current window untouched. You can always run `ccse` manually for an additional session.
