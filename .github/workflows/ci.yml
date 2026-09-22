@@ -25,10 +25,11 @@ jobs:
         run: npm ci
       - name: Run tests
         run: npm test
+      - name: Check JavaScript syntax
+        run: npm run check:syntax
+      - name: Audit the question bank
+        run: npm run audit:bank
+      - name: Simulate 100,000 mock exams
+        run: npm run simulate:exams -- 100000
       - name: Validate question bank
         run: node bin/ccse.mjs --validate-bank
-      - name: Check JavaScript syntax
-        run: |
-          node --check bin/ccse.mjs
-          node --check src/terminalQuiz.mjs
-          node --check src/terminalTui.mjs

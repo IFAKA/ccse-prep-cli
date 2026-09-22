@@ -109,6 +109,9 @@ This is a practical study aid, not a claim that one exact schedule is scientific
 - Delayed review of questions missed in the previous completed session.
 - Fresh-question, delayed-review, and overall scores in the completion summary.
 - Official pass threshold (`15/25`) and conservative preparation target (`20/25`).
+- Explicit `--mock` mode samples uniformly within official task quotas and ignores practice history. Use it to measure performance without adaptive selection.
+- Explicit `--practice` mode prioritizes weak and unseen questions with immediate correction.
+- `--readiness` reports recent complete mock scores, their minimum and mean, unique questions covered, questions still unseen in practice, and weak/uncertain/known counts. Readiness requires three consecutive complete mocks at 20/25 or better; practice scores are excluded.
 - Append-only local event log with safe resume after `Ctrl-C` or terminal shutdown.
 - Timeout handling that records partial work and prevents a timed-out session from resuming.
 - Optional start-of-day shell gate that launches one session per day, including a temporary tmux window.
@@ -136,6 +139,8 @@ Then run:
 ccse
 ```
 
+For an unbiased exam sample, run `ccse --mock`. For focused practice, run `ccse --practice`. Check mock-only readiness evidence with `ccse --readiness`.
+
 To uninstall the application while preserving study progress:
 
 ```bash
@@ -148,6 +153,7 @@ To inspect the installed command without starting a session:
 ccse --version
 ccse --help
 ccse --bank-info
+ccse --readiness
 ```
 
 The installer keeps versioned application releases under `~/.local/share/ccse-prep-cli` and study data under `~/.local/share/ccse-prep`. Uninstalling removes only the application and command link; progress is preserved.
@@ -168,9 +174,9 @@ Automatic preparation is skipped on the exam date, 24 September 2026.
 
 | Action | Key |
 | --- | --- |
-| Select option A | `J` |
-| Select option B | `K` |
-| Select option C | `L` |
+| Select option A / true | `J` |
+| Select option B / false | `K` |
+| Select option C (three-choice items only) | `L` |
 | Finish a complete session | `Enter` |
 | Leave and resume later | `Ctrl-C` |
 
@@ -218,6 +224,9 @@ CCSE_BANK_URL=https://example.com/question-bank.json ccse --update-bank
 
 ```bash
 npm test
+npm run check:syntax
+npm run audit:bank
+npm run simulate:exams -- 100000
 node bin/ccse.mjs --validate-bank
 node --check bin/ccse.mjs
 node --check src/terminalQuiz.mjs
@@ -229,7 +238,7 @@ zsh -n scripts/ccse-shell-gate.zsh
 
 The learning workflow is informed by research on retrieval practice, corrective feedback, and distributed practice. The CLI does not claim that its exact schedule is validated as a complete educational intervention. The exam content remains limited to the bundled official question bank.
 
-The official source for the 2026 content and exam format is the [Instituto Cervantes CCSE 2026 manual](https://examenes.cervantes.es/sites/default/files/manual-ccse-2026-def.pdf) and [official CCSE format page](https://examenes.cervantes.es/es/ccse/como).
+The verified rules, effective year, and official source links are recorded in [OFFICIAL-GROUND-TRUTH.md](OFFICIAL-GROUND-TRUTH.md). The bundled bank's structure and integrity checks are reproducible with `npm run audit:bank`.
 
 ## Contributing
 

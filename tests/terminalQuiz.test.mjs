@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answerKeyForInput, answerReview, buildMockPlan, canFinish, completionSummary, EXAM_DURATION_MS, explanationForQuestion, PREP_PASS_TARGET, reduceTerminalEvents, sessionModeForDate, sessionPlanForDate, selectTerminalQuestion, terminalSummary, TASK_DISTRIBUTION, validateQuestionBank, wrongAnswerReview } from "../src/terminalQuiz.mjs";
+import { answerKeyForInput, answerReview, buildAdaptiveReviewPlan, buildMockPlan, canFinish, completionSummary, EXAM_DURATION_MS, explanationForQuestion, PREP_PASS_TARGET, questionBankFingerprint, readinessSummary, reduceTerminalEvents, resumeSession, sessionModeForDate, sessionPlanForDate, selectTerminalQuestion, terminalSummary, TASK_DISTRIBUTION, validateQuestionBank, wrongAnswerReview } from "../src/terminalQuiz.mjs";
 import questionsData from "../data/ccse-2026-questions.json" with { type: "json" };
 
 const questions = questionsData.questions;
@@ -98,15 +98,36 @@ describe("terminal quiz", () => {
   });
 
   it("builds the official 10/3/2/3/7 mock distribution", () => {
-    const plan = buildMockPlan(questions, {}, Date.now());
+    const plan = buildMockPlan(questions, {}, Date.now(), () => 0.5);
     expect(plan).toHaveLength(25);
     expect(plan.reduce((counts, question) => { counts[question.task] += 1; return counts; }, { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 })).toEqual(TASK_DISTRIBUTION);
     expect(EXAM_DURATION_MS).toBe(45 * 60 * 1000);
   });
 
+  it("samples mock questions independently of training state", () => {
+    const weakStates = Object.fromEntries(questions.map((question) => [question.id, { status: "weak", attempts: 4, correct: 0 }]));
+    const random = () => 0.5;
+    expect(buildMockPlan(questions, {}, 0, random).map(({ id }) => id))
+      .toEqual(buildMockPlan(questions, weakStates, 1, random).map(({ id }) => id));
+  });
+
+  it("varies mock samples and reaches both ends of each task bank", () => {
+    let state = 0x12345678;
+    const random = () => { state = (1664525 * state + 1013904223) >>> 0; return state / 0x100000000; };
+    const seen = new Set();
+    for (let exam = 0; exam < 10000; exam += 1) {
+      const plan = buildMockPlan(questions, {}, 0, random);
+      expect(plan).toHaveLength(25);
+      expect(new Set(plan.map(({ id }) => id)).size).toBe(25);
+      expect(plan.reduce((counts, question) => { counts[question.task] += 1; return counts; }, { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 })).toEqual(TASK_DISTRIBUTION);
+      for (const question of plan) seen.add(question.id);
+    }
+    expect(seen.size).toBe(300);
+  });
+
   it("uses weak questions before unseen questions in adaptive review", () => {
     const states = reduceTerminalEvents([{ eventId: "weak", deviceId: "terminal", timestamp: 1, type: "ANSWER_RECORDED", payload: { questionId: 1001, correct: false } }]);
-    expect(buildMockPlan(questions, states, 1)[0].id).toBe(1001);
+    expect(buildAdaptiveReviewPlan(questions, states, 1)[0].id).toBe(1001);
   });
 
   it("switches from broad coverage to weak review, mocks, and no exam-day session", () => {
@@ -144,5 +165,78 @@ describe("terminal quiz", () => {
     const answers = Array.from({ length: 14 }, (_, index) => ({ questionId: index + 1, correct: true }));
     const summary = completionSummary(answers, {}, {}, questions, { timedOut: true, total: 25, sessionKind: "mock" });
     expect(summary).toMatchObject({ timedOut: true, unanswered: 11, officialPassed: false, safetyPassed: false });
+  });
+
+  it("enforces the real pass boundary at exactly 15 correct", () => {
+    for (const [correct, expected] of [[0, false], [14, false], [15, true], [16, true], [25, true]]) {
+      const answers = Array.from({ length: 25 }, (_, index) => ({ correct: index < correct }));
+      expect(completionSummary(answers).officialPassed).toBe(expected);
+    }
+  });
+
+  it("gives no official points for wrong or blank answers", () => {
+    const wrongAnswers = Array.from({ length: 25 }, (_, index) => ({ correct: index < 14 }));
+    const blanks = Array.from({ length: 14 }, () => ({ correct: true }));
+    expect(completionSummary(wrongAnswers).correct).toBe(14);
+    expect(completionSummary(blanks, {}, {}, [], { total: 25 }).unanswered).toBe(11);
+    expect(completionSummary(blanks, {}, {}, [], { total: 25 }).officialPassed).toBe(false);
+    expect(completionSummary([], {}, {}, [], { total: 25 })).toMatchObject({ correct: 0, answered: 0, unanswered: 25, officialPassed: false });
+  });
+
+  it("rejects duplicate text, malformed choices, missing IDs, and wrong task IDs", () => {
+    const base = questions.map((question) => ({ ...question, options: { ...question.options } }));
+    base[1].question = base[0].question;
+    base[2].options = { a: "", b: "x", c: "x" };
+    base[3].id = 9999;
+    const errors = validateQuestionBank(base).errors.join(" ");
+    expect(errors).toContain("duplicate question text");
+    expect(errors).toContain("empty or invalid answer choice");
+    expect(errors).toContain("duplicate answer choices");
+    expect(errors).toContain("unreachable id 9999");
+    const contaminated = questions.map((question) => ({ ...question, options: { ...question.options } }));
+    contaminated[0].options.c += " PREGUNTAS";
+    expect(validateQuestionBank(contaminated).errors.join(" ")).toContain("suspicious extracted text");
+  });
+
+  it("keeps readiness evidence limited to complete mocks", () => {
+    const events = [];
+    const fingerprints = questionBankFingerprint(questions);
+    let randomState = 42;
+    const random = () => { randomState = (1664525 * randomState + 1013904223) >>> 0; return randomState / 0x100000000; };
+    function addMock(index, score) {
+      const sessionId = `s-${index}`;
+      const plan = buildMockPlan(questions, {}, index, random);
+      events.push({ eventId: `done-${index}`, timestamp: index, type: "SESSION_COMPLETED", payload: { sessionId, sessionKind: "mock", answered: 25, correct: score, bankFingerprint: fingerprints, questionIds: plan.map(({ id }) => id) } });
+      for (const [answerIndex, question] of plan.entries()) {
+        const selected = answerIndex < score ? question.answer : Object.keys(question.options).find((key) => key !== question.answer);
+        events.push({ eventId: `answer-${index}-${answerIndex}`, timestamp: index, type: "ANSWER_RECORDED", payload: { sessionId, questionId: question.id, selected, correct: selected === question.answer, responseMs: 50, bankFingerprint: fingerprints } });
+      }
+      return plan;
+    }
+    const plans = [addMock(0, 20), addMock(1, 21), addMock(2, 20), addMock(3, 22)];
+    events.push({ eventId: "training", timestamp: 10, type: "SESSION_COMPLETED", payload: { sessionKind: "practice", answered: 25, correct: 25 } });
+    const seenStates = Object.fromEntries(questions.slice(0, 100).map(({ id }) => [id, { status: "learning" }]));
+    const readiness = readinessSummary(events, questions, seenStates);
+    expect(readiness.lastMocks).toHaveLength(4);
+    expect(readiness.mockQuestionsSeen).toBe(new Set(plans.flat().map(({ id }) => id)).size);
+    expect(readiness.uniqueQuestionsSeen).toBe(100);
+    expect(readiness.remainingUnseenQuestions).toBe(200);
+    expect(readiness.consistentMargin).toBe(true);
+    addMock(4, 14);
+    expect(readinessSummary(events, questions, seenStates).consistentMargin).toBe(false);
+    const changedBank = questions.map((question, index) => index ? question : { ...question, question: `${question.question} cambiada` });
+    expect(readinessSummary(events, changedBank).lastMocks).toHaveLength(0);
+  });
+
+  it("resumes only the same valid bank and question sequence", () => {
+    const fingerprint = questionBankFingerprint(questions);
+    const plan = buildMockPlan(questions, {}, 0, () => 0.25);
+    const started = { type: "SESSION_STARTED", timestamp: 1, payload: { sessionId: "s", sessionKind: "mock", bankFingerprint: fingerprint, questionIds: plan.map(({ id }) => id) } };
+    const answer = { type: "ANSWER_RECORDED", payload: { sessionId: "s", questionId: plan[0].id, selected: plan[0].answer, correct: true, responseMs: 100 } };
+    expect(resumeSession(started, [answer], questions, fingerprint).answers).toHaveLength(1);
+    expect(resumeSession(started, [answer], questions, "stale")).toBeUndefined();
+    expect(resumeSession({ ...started, payload: { ...started.payload, questionIds: plan.map(({ id }) => id).fill(99999) } }, [], questions, fingerprint)).toBeUndefined();
+    expect(() => resumeSession(started, [{ ...answer, payload: { ...answer.payload, correct: false } }], questions, fingerprint))
+      .toThrow("do not match the resumable question sequence");
   });
 });

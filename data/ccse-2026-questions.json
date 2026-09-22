@@ -107,7 +107,7 @@
       "options": {
         "a": "La Policía Foral de Navarra.",
         "b": "El Cuerpo Nacional de Policía.",
-        "c": "Los Mossos d’Esquadra. PREGUNTAS"
+        "c": "Los Mossos d’Esquadra."
       },
       "answer": "b",
       "page": 18,
@@ -1659,7 +1659,7 @@
       "question": "La Constitución garantiza el derecho de los españoles a una vivienda digna.",
       "options": {
         "a": "Verdadero.",
-        "b": "Falso. PREGUNTAS"
+        "b": "Falso."
       },
       "answer": "a",
       "page": 33,
@@ -2099,7 +2099,7 @@
       "options": {
         "a": "En Andalucía.",
         "b": "En Canarias.",
-        "c": "En Aragón. PREGUNTAS"
+        "c": "En Aragón."
       },
       "answer": "a",
       "page": 43,
@@ -2411,7 +2411,7 @@
       "options": {
         "a": "cantante pop.",
         "b": "bailarina clásica.",
-        "c": "directora de cine. PREGUNTAS"
+        "c": "directora de cine."
       },
       "answer": "c",
       "page": 66,
@@ -2866,7 +2866,7 @@
       "options": {
         "a": "En el Registro Civil.",
         "b": "En la Seguridad Social.",
-        "c": "En las comisarías de policía. PREGUNTAS"
+        "c": "En las comisarías de policía."
       },
       "answer": "a",
       "page": 92,

@@ -25,6 +25,8 @@ async function readJson(path) {
 function validatePayload(payload) {
   const result = validateQuestionBank(payload?.questions ?? []);
   if (!result.valid) throw new Error(`Question bank failed validation: ${result.errors.join("; ")}`);
+  if (payload.count !== undefined && payload.count !== payload.questions.length) throw new Error(`Question bank count metadata mismatch: expected ${payload.questions.length}, got ${payload.count}`);
+  if (payload.task_counts && Object.entries(result.counts).some(([task, count]) => Number(payload.task_counts[task]) !== count)) throw new Error("Question bank task count metadata mismatch");
   return payload;
 }
 

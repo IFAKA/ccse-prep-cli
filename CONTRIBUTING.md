@@ -7,6 +7,9 @@ Thanks for helping improve CCSE Prep CLI.
 ```bash
 npm install
 npm test
+npm run check:syntax
+npm run audit:bank
+npm run simulate:exams -- 100000
 node bin/ccse.mjs --validate-bank
 sh -n scripts/ccse-installer.sh
 ```

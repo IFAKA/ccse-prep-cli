@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,14 +7,19 @@ import { bankUpdateInterval, formatBankInfo, loadQuestionBank, BANK_DAILY_UPDATE
 const validPayload = {
   source: "test",
   count: 300,
-  questions: Array.from({ length: 300 }, (_, index) => ({
-    id: index + 1,
-    task: index < 120 ? 1 : index < 156 ? 2 : index < 180 ? 3 : index < 216 ? 4 : 5,
-    question: `Question ${index + 1}`,
-    options: { a: "A", b: "B", c: "C" },
-    answer: "a",
-    explanation: "Explanation",
-  })),
+  questions: (() => {
+    const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    return Array.from({ length: 300 }, (_, index) => {
+      const task = index < 120 ? 1 : index < 156 ? 2 : index < 180 ? 3 : index < 216 ? 4 : 5;
+      counts[task] += 1;
+      return {
+        id: task * 1000 + counts[task], task,
+        question: `Question ${index + 1}`,
+        options: task === 2 ? { a: "Verdadero.", b: "Falso." } : { a: "A", b: "B", c: "C" },
+        answer: "a", explanation: "Explanation", page: 1,
+      };
+    });
+  })(),
 };
 
 function response(payload, ok = true, status = 200) {
@@ -41,6 +46,31 @@ describe("question bank updates", () => {
     const result = await loadQuestionBank({ bundledPayload: validPayload, dataDir, now: 1000, fetchImpl: async () => response({ questions: [] }), sourceUrl: "https://example.test/bank.json" });
     expect(result.source).toBe("bundled");
     expect(result.updateError).toContain("failed validation");
+  });
+
+  it("rejects a partially malformed cached bank and uses the bundled bank", async () => {
+    const dataDir = await mkdtemp(join(tmpdir(), "ccse-bank-"));
+    const malformed = structuredClone(validPayload);
+    malformed.questions[0].options.a = "";
+    await writeFile(join(dataDir, "question-bank.json"), JSON.stringify(malformed));
+    await writeFile(join(dataDir, "question-bank-update.json"), JSON.stringify({ lastCheckedAt: 1000 }));
+    const result = await loadQuestionBank({ bundledPayload: validPayload, dataDir, now: 1001 });
+    expect(result.source).toBe("bundled");
+    expect(result.bank).toHaveLength(300);
+  });
+
+  it("fails loudly if the bundled bank itself is malformed and refresh fails", async () => {
+    const dataDir = await mkdtemp(join(tmpdir(), "ccse-bank-"));
+    const malformed = structuredClone(validPayload);
+    malformed.questions[0].options.a = "";
+    await expect(loadQuestionBank({ bundledPayload: malformed, dataDir, now: 1000, fetchImpl: async () => { throw new Error("offline"); } }))
+      .rejects.toThrow("Question bank failed validation");
+  });
+
+  it("rejects count metadata that disagrees with the validated records", async () => {
+    const dataDir = await mkdtemp(join(tmpdir(), "ccse-bank-"));
+    await expect(loadQuestionBank({ bundledPayload: { ...validPayload, count: 299 }, dataDir, now: 1000, fetchImpl: async () => { throw new Error("offline"); } }))
+      .rejects.toThrow("count metadata mismatch");
   });
 
   it("uses the cached bank during the update interval", async () => {

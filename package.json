@@ -33,7 +33,10 @@
   },
   "scripts": {
     "start": "node bin/ccse.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:syntax": "node --check bin/ccse.mjs && node --check src/terminalQuiz.mjs && node --check src/questionBank.mjs && node --check src/terminalTui.mjs && node --check src/schedulerCore.mjs && node --check src/eventStore.mjs && node --check scripts/audit-question-bank.mjs && node --check scripts/simulate-exams.mjs",
+    "audit:bank": "node scripts/audit-question-bank.mjs",
+    "simulate:exams": "node scripts/simulate-exams.mjs"
   },
   "dependencies": {
     "ink": "^5.2.1",
